@@ -1,9 +1,12 @@
 // ---------------------------------------------------------------------------
 
 #include <vcl.h>
+#include "HTMLHelpViewer.hpp"
 #pragma hdrstop
+#pragma link "HTMLHelpViewer"
 
 #include "Unit1.h"
+#include "Unit2.h"
 // ---------------------------------------------------------------------------
 #pragma package(smart_init)
 #pragma resource "*.dfm"
@@ -353,7 +356,6 @@ void player::turn(player& enemy, int character, int digit) {
 	hits[character][digit] = 1;
 	if (enemy.ships[character][digit] == 2) {
 		enemy.ships[character][digit] = 3;
-		Form1->DrawGrid2->Canvas->FillRect(Form1->DrawGrid2->CellRect(character,digit));
 	}
 }
 
@@ -385,24 +387,113 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
 	human.ships_init(); // инициализация массивов человека
 	computer.ships_init(); // инициализация массивов компьютера
 	DrawGrid1->Canvas->Brush->Color = clBlue;
-	DrawGrid2->Canvas->Brush->Color = clGreen;
-	for (int i = 0; i < 11; i++) {
-		for (int j = 0; j < 11; j++) {
-			if (human.ships[i][j] == 2) {
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			switch(human.ships[i][j]) {
+			case 2:
+				DrawGrid1->Canvas->Brush->Color = clBlue;
 				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			case 3:
+				DrawGrid1->Canvas->Brush->Color = clRed;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
 			}
-			if (computer.ships[i][j] == 2) {
+		}
+	}
+	DrawGrid2->Enabled = true;
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::DrawGrid2Click(TObject *Sender) {
+	human.turn(computer, DrawGrid2->Col, DrawGrid2->Row);
+	if (computer.ships[DrawGrid2->Col][DrawGrid2->Row] == 3) {
+		ShowMessage("Попали!");
+	}
+	else {
+		computer.turn(human);
+	}
+	check_ending();
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::Timer1Timer(TObject *Sender) {
+	clearsea();
+	DrawGrid1->Canvas->Brush->Color = clBlue;
+	DrawGrid2->Canvas->Brush->Color = clGreen;
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+
+			if (human.hits[i][j] == 1) {
+				DrawGrid2->Canvas->Brush->Color = clGray;
 				DrawGrid2->Canvas->FillRect(DrawGrid2->CellRect(i, j));
 			}
+			if (computer.hits[i][j] == 1) {
+				DrawGrid1->Canvas->Brush->Color = clGray;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+			}
+
+			switch(human.ships[i][j]) {
+			case 2:
+				DrawGrid1->Canvas->Brush->Color = clBlue;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			case 3:
+				DrawGrid1->Canvas->Brush->Color = clRed;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			}
+			if (computer.ships[i][j] == 3) {
+				DrawGrid2->Canvas->Brush->Color = clRed;
+				DrawGrid2->Canvas->FillRect(DrawGrid2->CellRect(i, j));
+			}
+
 		}
 	}
 }
 
 // ---------------------------------------------------------------------------
-void __fastcall TForm1::DrawGrid2Click(TObject *Sender) {
-	ShowMessage(DrawGrid2->Row);
-	human.turn(computer, DrawGrid2->Row, DrawGrid2->Col);
-	computer.turn(human);
-	check_ending();
+void __fastcall TForm1::N1Click(TObject *Sender) {
+	clearsea();
+	human.ships_init(); // инициализация массивов человека
+	computer.ships_init(); // инициализация массивов компьютера
+	DrawGrid1->Canvas->Brush->Color = clBlue;
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			switch(human.ships[i][j]) {
+			case 2:
+				DrawGrid1->Canvas->Brush->Color = clBlue;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			case 3:
+				DrawGrid1->Canvas->Brush->Color = clRed;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			}
+		}
+	}
+
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::N2Click(TObject *Sender) {
+	Form1->Close();
 }
 // ---------------------------------------------------------------------------
+
+void __fastcall TForm1::N3Click(TObject *Sender) {
+	Form2->Show();
+}
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::FormActivate(TObject *Sender)
+{
+Application->HelpFile = "seawars.chm";
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::N4Click(TObject *Sender)
+{
+Application->HelpCommand(HELP_CONTENTS, 1);
+}
+//---------------------------------------------------------------------------
+
