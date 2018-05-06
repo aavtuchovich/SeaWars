@@ -1,0 +1,497 @@
+// ---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+#include "Unit2.h"
+// ---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TForm1 *Form1;
+
+// перечеисление хранит направление: горизонтальное и вертикальное
+enum direction {
+	h, v
+};
+
+class player {
+public:
+	bool defeat_flag; // переменная хранит информацию о поражении
+	int hits[10][10]; // массив "выстрелов" объекта
+	int ships[10][10]; // массив кораблей объекта
+
+	player() : defeat_flag(0) {
+	} // конструктор
+
+	void ships_init();
+	void set(int deck);
+	int place_ship(int s, int c, direction dir, int deck);
+	void turn(player&, int character, int digit);
+	void turn(player&);
+};
+
+player human;
+player computer;
+
+// В функции устанавливаются и проверяются флаги defeat_flag игроков.
+int check_ending() {
+	int flag = 0;
+	int human_flag = 0;
+	int computer_flag = 0;
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			if (human.ships[i][j] == 2)
+				human_flag = 1; // у пользователя ещё остались неповреждённые корабли
+			if (computer.ships[i][j] == 2)
+				computer_flag = 1; // у компьютера ещё остались неповреждённые корабли
+		}
+	}
+	if (human_flag == 0)
+		flag = 2;
+	if (computer_flag == 0)
+		flag = 1;
+	if (flag == 1) {
+		ShowMessage("Победил игрок!");
+		return 2;
+	}
+	if (flag == 2) {
+		ShowMessage("Победил компьютер!");
+		return 2;
+	}
+}
+
+void player::ships_init() {
+	// инициализация массивов hits и ships
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			ships[i][j] = 1;
+			hits[i][j] = 0;
+		}
+	}
+
+	// Установка кораблей
+	set(4);
+	set(3);
+	set(3);
+	set(2);
+	set(2);
+	set(2);
+	set(1);
+	set(1);
+	set(1);
+	set(1);
+}
+
+void player::set(int deck) {
+	int my = deck - 1;
+	bool isset = 0;
+	int s, c;
+	direction dir;
+	while (isset == 0) // проверка удалось ли разместить корабль
+	{
+		dir = static_cast<direction>(rand() % 2); // выбираем направление
+
+		s = rand() % 10; // случайным образом определяются координаты
+		c = rand() % 10;
+		int e = 0;
+		switch(dir) {
+		case h:
+			if (ships[s][c + deck - 1] == 1) {
+				e = place_ship(s, c, dir, deck); // проверка смежных клеток
+				if (e == 0) {
+					for (int i = 0; i < deck; i++) {
+						ships[s][c + i] = 2;
+						// размещаем корабль в массиве ships
+					}
+					isset = 1;
+				}
+			}
+			break;
+		case v:
+			if (ships[s + deck - 1][c] == 1) {
+				e = place_ship(s, c, dir, deck);
+				if (e == 0) {
+					for (int i = 0; i < deck; i++) {
+						ships[s + i][c] = 2;
+					}
+					isset = 1;
+				}
+			}
+			break;
+		} // конец switch
+	} // конец while
+}
+// конец set4()
+
+/*
+Функция проверяет, можно ли в данной координате [s][c]
+разместить корабль с палубами deck.
+В комментариях показано какие клетки проверяются при установке
+четырёхпалубного корабля в [4][3]
+ */
+int player::place_ship(int s, int c, direction dir, int deck) {
+	int e = 0;
+	switch(dir) {
+	case h:
+		if (ships[s - 1][c - 1] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|X
+			3| 2222
+			4|
+			 */
+		}
+		if (ships[s - 1][c + deck] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|     X
+			3| 2222
+			4|
+			 */
+		}
+		if (ships[s + 1][c - 1] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|
+			3| 2222
+			4|X
+			 */
+		}
+		if (ships[s + 1][c + deck] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|
+			3| 2222
+			4|     X
+			 */
+		}
+
+		if (ships[s][c - 1] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|
+			3|X2222
+			4|
+			 */
+		}
+		if (ships[s][c + deck] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|
+			3| 2222X
+			4|
+			 */
+		}
+		for (int i = 0; i < deck; i++) {
+			if (ships[s - 1][c + i] == 2) {
+				e = 1;
+				/*
+				345678
+				#-------
+				2| XXXX
+				3| 2222
+				4|
+				 */
+			}
+			if (ships[s + 1][c + i] == 2) {
+				e = 1;
+				/*
+				345678
+				#-------
+				2|
+				3| 2222
+				4| XXXX
+				 */
+			}
+		}
+		break;
+	case v:
+		if (ships[s - 1][c - 1] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|X
+			3| 2
+			4| 2
+			5| 2
+			6| 2
+			7|
+			 */
+		}
+		if (ships[s - 1][c + 1] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|  X
+			3| 2
+			4| 2
+			5| 2
+			6| 2
+			7| X
+			 */
+		}
+		if (ships[s + deck][c - 1] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|
+			3| 2
+			4| 2
+			5| 2
+			6| 2
+			7|X
+			 */
+		}
+		if (ships[s + deck][c + 1] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|
+			3| 2
+			4| 2
+			5| 2
+			6| 2
+			7|  X
+			 */
+		}
+
+		if (ships[s - 1][c] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2| X
+			3| 2
+			4| 2
+			5| 2
+			6| 2
+			7|
+			 */
+		}
+		if (ships[s + deck][c] == 2) {
+			e = 1;
+			/*
+			345678
+			#-------
+			2|
+			3| 2
+			4| 2
+			5| 2
+			6| 2
+			7| X
+			 */
+		}
+		for (int i = 0; i < deck; i++) {
+			if (ships[s + i][c - 1] == 2) {
+				e = 1;
+				/*
+				345678
+				#-------
+				2|
+				3|X2
+				4|X2
+				5|X2
+				6|X2
+				7|
+				 */
+			}
+			if (ships[s + i][c + 1] == 2) {
+				e = 1;
+				/*
+				345678
+				#-------
+				2|
+				3| 2X
+				4| 2X
+				5| 2X
+				6| 2X
+				7|
+				 */
+			}
+		}
+		break;
+	}
+	return e;
+}
+
+// Ход компьютера: вносим изменения в массивы human.ships и computer.hits
+void player::turn(player& enemy) {
+	// srand(static_cast<unsigned int>(time(NULL)));
+	bool flag = 0;
+	while (flag == 0) {
+		int character = rand() % 10; // Координаты по которым будет стрелять компьютер
+		int digit = rand() % 10; // выбираются случайно
+		if (hits[character][digit] != 1) // проверка: выбирал ли уже компьютер эти координаты
+		{
+			hits[character][digit] = 1;
+			flag = 1;
+			if (enemy.ships[character][digit] == 2) {
+				enemy.ships[character][digit] = 3;
+			}
+		}
+	}
+}
+
+// Ход игрока: вносим изменения в массивы computer.ships и human.hits
+void player::turn(player& enemy, int character, int digit) {
+	hits[character][digit] = 1;
+	if (enemy.ships[character][digit] == 2) {
+		enemy.ships[character][digit] = 3;
+	}
+}
+
+__fastcall TForm1::TForm1(TComponent* Owner) : TForm(Owner) {
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::FormCreate(TObject * Sender) {
+	randomize();
+}
+
+void clearsea() {
+	Form1->DrawGrid1->Canvas->Brush->Color = clWhite;
+	Form1->DrawGrid2->Canvas->Brush->Color = clWhite;
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			Form1->DrawGrid1->Canvas->FillRect(Form1->DrawGrid1->CellRect(i,
+					j));
+			Form1->DrawGrid2->Canvas->FillRect(Form1->DrawGrid1->CellRect(i,
+					j));
+
+		}
+	}
+}
+// ---------------------------------------------------------------------------
+
+void __fastcall TForm1::Button1Click(TObject *Sender) {
+	clearsea();
+	human.ships_init(); // инициализация массивов человека
+	computer.ships_init(); // инициализация массивов компьютера
+	DrawGrid1->Canvas->Brush->Color = clBlue;
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			switch(human.ships[i][j]) {
+			case 2:
+				DrawGrid1->Canvas->Brush->Color = clBlue;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			case 3:
+				DrawGrid1->Canvas->Brush->Color = clRed;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			}
+		}
+	}
+	DrawGrid2->Enabled = true;
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::DrawGrid2Click(TObject *Sender) {
+	human.turn(computer, DrawGrid2->Col, DrawGrid2->Row);
+	if (computer.ships[DrawGrid2->Col][DrawGrid2->Row] == 3) {
+		ShowMessage("Попали!");
+	}
+	else {
+		computer.turn(human);
+	}
+	check_ending();
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::Timer1Timer(TObject *Sender) {
+	clearsea();
+	DrawGrid1->Canvas->Brush->Color = clBlue;
+	DrawGrid2->Canvas->Brush->Color = clGreen;
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+
+			if (human.hits[i][j] == 1) {
+				DrawGrid2->Canvas->Brush->Color = clGray;
+				DrawGrid2->Canvas->FillRect(DrawGrid2->CellRect(i, j));
+			}
+			if (computer.hits[i][j] == 1) {
+				DrawGrid1->Canvas->Brush->Color = clGray;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+			}
+
+			switch(human.ships[i][j]) {
+			case 2:
+				DrawGrid1->Canvas->Brush->Color = clBlue;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			case 3:
+				DrawGrid1->Canvas->Brush->Color = clRed;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			}
+			if (computer.ships[i][j] == 3) {
+				DrawGrid2->Canvas->Brush->Color = clRed;
+				DrawGrid2->Canvas->FillRect(DrawGrid2->CellRect(i, j));
+			}
+
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::N1Click(TObject *Sender) {
+	clearsea();
+	human.ships_init(); // инициализация массивов человека
+	computer.ships_init(); // инициализация массивов компьютера
+	DrawGrid1->Canvas->Brush->Color = clBlue;
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			switch(human.ships[i][j]) {
+			case 2:
+				DrawGrid1->Canvas->Brush->Color = clBlue;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			case 3:
+				DrawGrid1->Canvas->Brush->Color = clRed;
+				DrawGrid1->Canvas->FillRect(DrawGrid1->CellRect(i, j));
+				break;
+			}
+		}
+	}
+
+}
+
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::N2Click(TObject *Sender) {
+	Form1->Close();
+}
+// ---------------------------------------------------------------------------
+
+void __fastcall TForm1::N3Click(TObject *Sender) {
+	Form2->Show();
+}
+// ---------------------------------------------------------------------------
+void __fastcall TForm1::FormActivate(TObject *Sender)
+{
+Application->HelpFile = "seawars.chm";
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::N4Click(TObject *Sender)
+{
+Application->HelpCommand(HELP_CONTENTS, 1);
+}
+//---------------------------------------------------------------------------
+
